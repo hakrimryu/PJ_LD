@@ -3,7 +3,9 @@ using UnityEngine;
 
 public class Character : MonoBehaviour
 {
-    Animator _animator;
+    protected Animator Animator;
+    protected SpriteRenderer SpriteRenderer;
+    
     private void Start()
     {
         Init();
@@ -11,6 +13,7 @@ public class Character : MonoBehaviour
 
     public virtual void Init()
     {
-        _animator = transform.GetChild(0).GetComponent<Animator>();
+        Animator = transform.GetChild(0).GetComponent<Animator>();
+        SpriteRenderer = transform.GetChild(0).GetComponent<SpriteRenderer>();
     }
 }

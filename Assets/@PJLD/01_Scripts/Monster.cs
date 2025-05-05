@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using UnityEngine;
 
 public class Monster : Character
@@ -17,9 +15,10 @@ public class Monster : Character
     private void Update()
     {
         transform.position = Vector2.MoveTowards(transform.position, Spawner.MonsterMovePosList[targetValue], Time.deltaTime * _speed);
-        if (Vector2.Distance(transform.position, Spawner.MonsterMovePosList[targetValue]) <= 0.1f)
+        if (Vector2.Distance(transform.position, Spawner.MonsterMovePosList[targetValue]) <= 0.0f)
         {
             targetValue++;
+            SpriteRenderer.flipX = targetValue >= 3;
 
             if (targetValue >= 4)
             {

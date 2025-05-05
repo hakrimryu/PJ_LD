@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3576702143483972559}
   - component: {fileID: 2021481164377531986}
+  - component: {fileID: 845118010839817840}
   m_Layer: 0
   m_Name: Hero_0000
   m_TagString: Untagged
@@ -46,6 +47,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 628ad81c0038b0a478fd5596b78d4044, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!210 &845118010839817840
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1138107760780202760}
+  m_Enabled: 1
+  m_SortingLayerID: 19661613
+  m_SortingLayer: 1
+  m_SortingOrder: 0
+  m_SortAtRoot: 0
 --- !u!1 &4178316820577637392
 GameObject:
   m_ObjectHideFlags: 0
@@ -121,9 +134,9 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 1
+  m_SortingOrder: 0
   m_Sprite: {fileID: -2413806693520163455, guid: a86470a33a6bf42c4b3595704624658b, type: 3}
-  m_Color: {r: 0.040583827, g: 0.4528302, b: 0.12962908, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.78431374}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
