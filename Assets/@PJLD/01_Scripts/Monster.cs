@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class Monster : Character
 {
+    [SerializeField] private HitText hitText;
+    
     private int _targetValue;
     public int hp;
     private bool _isDead = false;
@@ -36,6 +38,8 @@ public class Monster : Character
         if (_isDead) return;
         
         hp -= damage;
+        Instantiate(hitText, transform.position, Quaternion.identity).Init(damage);
+        
         if (hp <= 0)
         {
             hp = 0;
