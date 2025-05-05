@@ -7,3 +7,4 @@
 - vHierarchy 2
 - vTabs 2
 - vInspector 2
+- Rainbow Folders 2
