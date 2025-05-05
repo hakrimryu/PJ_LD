@@ -1,16 +1,49 @@
 using UnityEngine;
 
-public class Hero : MonoBehaviour
+public class Hero : Character
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public float attackRange = 1.0f;
+    public float attackSpeed = 1.0f;
+    public Monster target;
+    public LayerMask enemyLayerMask;
+
+    private void Update()
     {
-        
+        CheckForEnemies();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void CheckForEnemies()
     {
-        
+        Collider2D[] enemiesInRange = Physics2D.OverlapCircleAll(transform.position, attackRange, enemyLayerMask);
+
+        attackSpeed += Time.deltaTime;
+        if (enemiesInRange.Length > 0)
+        {
+            target = enemiesInRange[0].GetComponent<Monster>();
+
+            if (attackSpeed >= 1.0f)
+            {
+                attackSpeed = 0.0f;
+                AttackEnemy(target);
+
+            }
+            
+        }
+        else
+        {
+            target = null;
+        }
+    }
+    
+    private void AttackEnemy(Monster enemy)
+    {
+        AnimatorChange("ATTACK", true);
+        enemy.GetDamage(10);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }

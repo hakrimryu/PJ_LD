@@ -1,10 +1,12 @@
+using System.Collections;
 using UnityEngine;
 
 public class Monster : Character
 {
-    private int targetValue;
+    private int _targetValue;
+    public int hp;
+    private bool _isDead = false;
     
-    public Vector2 _target;
     private float _speed = 1f;
     
     public override void Init()
@@ -14,16 +16,48 @@ public class Monster : Character
 
     private void Update()
     {
-        transform.position = Vector2.MoveTowards(transform.position, Spawner.MonsterMovePosList[targetValue], Time.deltaTime * _speed);
-        if (Vector2.Distance(transform.position, Spawner.MonsterMovePosList[targetValue]) <= 0.0f)
+        if (_isDead) return;
+        
+        transform.position = Vector2.MoveTowards(transform.position, Spawner.MonsterMovePosList[_targetValue], Time.deltaTime * _speed);
+        if (Vector2.Distance(transform.position, Spawner.MonsterMovePosList[_targetValue]) <= 0.0f)
         {
-            targetValue++;
-            SpriteRenderer.flipX = targetValue >= 3;
+            _targetValue++;
+            SpriteRenderer.flipX = _targetValue >= 3;
 
-            if (targetValue >= 4)
+            if (_targetValue >= 4)
             {
-                targetValue = 0;
+                _targetValue = 0;
             }
         }
+    }
+
+    public void GetDamage(int damage)
+    {
+        if (_isDead) return;
+        
+        hp -= damage;
+        if (hp <= 0)
+        {
+            hp = 0;
+            _isDead = true;
+            gameObject.layer = LayerMask.NameToLayer("Default");
+            StartCoroutine(DieCo());
+            AnimatorChange("Die", true);
+        }
+    }
+
+    private IEnumerator DieCo()
+    {
+        float alpha = 1.0f;
+        
+        while (SpriteRenderer.color.a > 0.0f)
+        {
+            alpha -= Time.deltaTime;
+            SpriteRenderer.color = new Color(SpriteRenderer.color.r, SpriteRenderer.color.g, SpriteRenderer.color.b, alpha);
+            
+            yield return null;
+        }
+        
+        Destroy(gameObject);
     }
 }
