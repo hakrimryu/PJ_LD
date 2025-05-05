@@ -325,8 +325,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 758d135b32823404a9f7c3f836d70e3a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spawnPrefab: {fileID: 1138107760780202760, guid: dedd54acac1038548967964a0a13e7fc, type: 3}
-  spawnMonsterPrefab: {fileID: 4322788109391437318, guid: c4a954c7e415e724ab87668ba0f00957, type: 3}
+  _characterPrefab: {fileID: 1138107760780202760, guid: dedd54acac1038548967964a0a13e7fc, type: 3}
+  _monsterPrefab: {fileID: 4322788109391437318, guid: c4a954c7e415e724ab87668ba0f00957, type: 3}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -804,8 +804,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 250035546}
-        m_TargetAssemblyTypeName: CharacterSpawner, Assembly-CSharp
-        m_MethodName: Summon
+        m_TargetAssemblyTypeName: Spawner, Assembly-CSharp
+        m_MethodName: SummonCharacter
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
