@@ -1,8 +1,6 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Cysharp.Threading.Tasks;
-using System.Threading;
-using System;
 
 /// <summary>
 /// 부모 SpriteRenderer를 기준으로 6x3 셀 오브젝트의 위치를 계산합니다.
@@ -12,82 +10,58 @@ using System;
 [RequireComponent(typeof(SpriteRenderer))]
 public class Spawner : MonoBehaviour
 {
-    #region Fields
-    
-    [SerializeField] private GameObject _characterPrefab;
-    [SerializeField] private Monster _monsterPrefab;
+    [SerializeField] private GameObject spawnPrefab;
+
+    [SerializeField] private Monster spawnMonsterPrefab;
     
     private SpriteRenderer _parentRenderer;
+
     private Vector2 _parentSize;
     private Vector2 _cellScale;
-    private CancellationTokenSource _cancellationTokenSource;
     
     /// <summary>
     /// 계산된 셀의 위치 리스트
     /// 計算されたセルの位置リスト
     /// List of calculated cell positions
     /// </summary>
-    private readonly List<Vector2> _spawnPositionList = new();
-    private readonly List<bool> _cellOccupied = new();
+    private readonly List<Vector2> _spawnList = new();
+    private readonly List<bool> _hasCharacter = new();
 
-    /// <summary>
-    /// 몬스터가 이동할 수 있는 위치 목록
-    /// モンスターが移動できる位置のリスト
-    /// List of positions where monsters can move
-    /// </summary>
     public static readonly List<Vector2> MonsterMovePosList = new();
-    
-    #endregion
-
-    #region Unity Lifecycle
-    
-    private void Awake()
-    {
-        _cancellationTokenSource = new CancellationTokenSource();
-    }
 
     private void Start()
     {
         Initialize();
-        SpawnMonstersAsync(_cancellationTokenSource.Token).Forget();
     }
-    
-    private void OnDestroy()
-    {
-        _cancellationTokenSource?.Cancel();
-        _cancellationTokenSource?.Dispose();
-        _cancellationTokenSource = null;
-    }
-    
-    #endregion
 
-    #region Initialization
-    
     /// <summary>
-    /// 스포너를 초기화합니다.
-    /// スポナーを初期化します。
-    /// Initializes the spawner.
+    /// 필드 값 초기화
+    /// フィールド値の初期化を行います。
+    /// Initializes field values.
     /// </summary>
     private void Initialize()
     {
-        InitializeGrid();
-        CreateSpawnPositions();
-        InitializeMonsterMovePositions();
+        InitGrid();
+        SpawnGrid();
+
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            MonsterMovePosList.Add(transform.GetChild(i).position);
+        }
+
+        StartCoroutine(SpawnMonsterCo());
     }
 
-    /// <summary>
-    /// 그리드 관련 필드 값을 초기화합니다.
-    /// グリッド関連のフィールド値を初期化します。
-    /// Initializes the grid-related field values.
-    /// </summary>
-    private void InitializeGrid()
+    #region Grid
+
+    private void InitGrid()
     {
         _parentRenderer = GetComponent<SpriteRenderer>();
         _parentSize = _parentRenderer.bounds.size;
 
         _cellScale = new Vector2(
-            transform.localScale.x / GameDefine.GRID_COLUMN_COUNT,
-            transform.localScale.y / GameDefine.GRID_ROW_COUNT
+            transform.localScale.x / GameDefine.GridColumnCount,
+            transform.localScale.y / GameDefine.GridRowCount
         );
     }
 
@@ -96,25 +70,22 @@ public class Spawner : MonoBehaviour
     /// 全てのセルの位置を計算してリストに保存します。
     /// Calculates all cell positions and stores them in the list.
     /// </summary>
-    private void CreateSpawnPositions()
+    private void SpawnGrid()
     {
-        _spawnPositionList.Clear();
-        _cellOccupied.Clear();
-        
-        for (int row = 0; row < GameDefine.GRID_ROW_COUNT; row++)
+        for (int row = 0; row < GameDefine.GridRowCount; row++)
         {
-            for (int col = 0; col < GameDefine.GRID_COLUMN_COUNT; col++)
+            for (int col = 0; col < GameDefine.GridColumnCount; col++)
             {
-                _spawnPositionList.Add(CalculateLocalPosition(row, col));
-                _cellOccupied.Add(false);
+                _spawnList.Add(CalculateLocalPosition(row, col));
+                _hasCharacter.Add(false);
             }
         }
     }
 
     /// <summary>
-    /// 셀의 위치를 계산합니다.
-    /// セルの位置を計算します。
-    /// Calculates the position of a cell.
+    /// 셀의 위치를 계산합니다 (원본 코드 위치 계산 유지).
+    /// セルの位置を計算します（元のコードと同じ位置になるように）。
+    /// Calculates the position of a cell (keeps the same logic as original code).
     /// </summary>
     private Vector2 CalculateLocalPosition(int row, int col)
     {
@@ -125,94 +96,42 @@ public class Spawner : MonoBehaviour
         return new Vector2(xPos, yPos + yAdjust);
     }
 
-    /// <summary>
-    /// 몬스터 이동 위치를 초기화합니다.
-    /// モンスターの移動位置を初期化します。
-    /// Initializes monster move positions.
-    /// </summary>
-    private void InitializeMonsterMovePositions()
-    {
-        MonsterMovePosList.Clear();
-        for (int i = 0; i < transform.childCount; i++)
-        {
-            MonsterMovePosList.Add(transform.GetChild(i).position);
-        }
-    }
-    
     #endregion
 
-    #region Character Spawn
-    
+    #region Player Spawn
+
     /// <summary>
     /// 빈 위치에 캐릭터를 소환합니다. 꽉 찼으면 생성하지 않고 로그를 남깁니다.
     /// 空いているセルにキャラクターを召喚します。全て埋まっている場合はログを出力します。
     /// Spawns a character into an empty cell. If full, logs a message and does not spawn.
     /// </summary>
-    public void SummonCharacter()
+    public void Summon()
     {
-        if (!TryFindEmptyCell(out int posIndex))
+        int posIndex = _hasCharacter.FindIndex(occupied => occupied == false);
+
+        if (posIndex == -1)
         {
             Debug.LogWarning("[CharacterSpawner] 모든 그리드가 이미 꽉 찼습니다. 소환할 수 없습니다.");
             return;
         }
 
-        SpawnCharacterAtPosition(posIndex);
-    }
-
-    /// <summary>
-    /// 빈 셀을 찾습니다.
-    /// 空いているセルを探します。
-    /// Finds an empty cell.
-    /// </summary>
-    private bool TryFindEmptyCell(out int posIndex)
-    {
-        posIndex = _cellOccupied.FindIndex(occupied => !occupied);
-        return posIndex != -1;
-    }
-
-    /// <summary>
-    /// 지정된 위치에 캐릭터를 생성합니다.
-    /// 指定された位置にキャラクターを生成します。
-    /// Spawns a character at the specified position.
-    /// </summary>
-    private void SpawnCharacterAtPosition(int posIndex)
-    {
-        GameObject character = Instantiate(_characterPrefab);
-        character.transform.position = _spawnPositionList[posIndex];
-        _cellOccupied[posIndex] = true;
+        GameObject go = Instantiate(spawnPrefab);
+        go.transform.position = _spawnList[posIndex];
+        _hasCharacter[posIndex] = true;
     }
     
     #endregion
 
     #region Monster Spawn
-    
-    /// <summary>
-    /// 지정된 간격으로 몬스터를 생성합니다.
-    /// 指定された間隔でモンスターを生成します。
-    /// Spawns monsters at the specified interval.
-    /// </summary>
-    private async UniTask SpawnMonstersAsync(CancellationToken cancellationToken)
+
+    private IEnumerator SpawnMonsterCo()
     {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            SpawnMonster();
-            
-            await UniTask.Delay(
-                TimeSpan.FromSeconds(GameDefine.MONSTER_SPAWN_INTERVAL), 
-                cancellationToken: cancellationToken
-            );
-        }
+        var go = Instantiate(spawnMonsterPrefab, MonsterMovePosList[0], Quaternion.identity);
+        
+        yield return new WaitForSeconds(0.5f);
+
+        StartCoroutine(SpawnMonsterCo());
     }
 
-    /// <summary>
-    /// 몬스터를 생성합니다.
-    /// モンスターを生成します。
-    /// Spawns a monster.
-    /// </summary>
-    private void SpawnMonster()
-    {
-        Instantiate(_monsterPrefab, MonsterMovePosList[0], Quaternion.identity);
-    }
-    
     #endregion
 }
