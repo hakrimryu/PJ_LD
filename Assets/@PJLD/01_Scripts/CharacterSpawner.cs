@@ -9,6 +9,9 @@ using UnityEngine;
 [RequireComponent(typeof(SpriteRenderer))]
 public class CharacterSpawner : MonoBehaviour
 {
+    [SerializeField]
+    private GameObject spawnPrefab;
+
     private SpriteRenderer _parentRenderer;
     private Vector2 _parentSize;
     private Vector2 _cellScale;
@@ -18,12 +21,12 @@ public class CharacterSpawner : MonoBehaviour
     /// 計算されたセルの位置リスト
     /// List of calculated cell positions
     /// </summary>
-    public List<Vector2> spawnList = new();
+    private readonly List<Vector2> _spawnList = new();
+    private readonly List<bool> _hasCharacter = new();
 
     private void Start()
     {
         Initialize();
-        SpawnGrid();
     }
 
     /// <summary>
@@ -32,6 +35,14 @@ public class CharacterSpawner : MonoBehaviour
     /// Initializes field values.
     /// </summary>
     private void Initialize()
+    {
+        InitGrid();
+        SpawnGrid();
+    }
+
+    #region Grid
+
+    private void InitGrid()
     {
         _parentRenderer = GetComponent<SpriteRenderer>();
         _parentSize = _parentRenderer.bounds.size;
@@ -53,7 +64,8 @@ public class CharacterSpawner : MonoBehaviour
         {
             for (int col = 0; col < GameDefine.GridColumnCount; col++)
             {
-                spawnList.Add(CalculateLocalPosition(row, col));
+                _spawnList.Add(CalculateLocalPosition(row, col));
+                _hasCharacter.Add(false);
             }
         }
     }
@@ -70,5 +82,27 @@ public class CharacterSpawner : MonoBehaviour
         float yAdjust = transform.position.y - _cellScale.y;
 
         return new Vector2(xPos, yPos + yAdjust);
+    }
+
+    #endregion
+
+    /// <summary>
+    /// 빈 위치에 캐릭터를 소환합니다. 꽉 찼으면 생성하지 않고 로그를 남깁니다.
+    /// 空いているセルにキャラクターを召喚します。全て埋まっている場合はログを出力します。
+    /// Spawns a character into an empty cell. If full, logs a message and does not spawn.
+    /// </summary>
+    public void Summon()
+    {
+        int posIndex = _hasCharacter.FindIndex(occupied => occupied == false);
+
+        if (posIndex == -1)
+        {
+            Debug.LogWarning("[CharacterSpawner] 모든 그리드가 이미 꽉 찼습니다. 소환할 수 없습니다.");
+            return;
+        }
+
+        GameObject go = Instantiate(spawnPrefab);
+        go.transform.position = _spawnList[posIndex];
+        _hasCharacter[posIndex] = true;
     }
 }
