@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -8,26 +9,29 @@ using UnityEngine;
 /// Calculates 6x3 cell positions based on the parent SpriteRenderer.
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
-public class Spawner : MonoBehaviour
+public class Spawner : NetworkBehaviour
 {
     [SerializeField] private GameObject spawnPrefab;
 
     [SerializeField] private Monster spawnMonsterPrefab;
-    
-    private SpriteRenderer _parentRenderer;
+
 
     private Vector2 _parentSize;
     private Vector2 _cellScale;
-    
+
     /// <summary>
     /// 계산된 셀의 위치 리스트
     /// 計算されたセルの位置リスト
     /// List of calculated cell positions
     /// </summary>
-    private readonly List<Vector2> _spawnList = new();
-    private readonly List<bool> _hasCharacter = new();
+    private readonly List<Vector2> _playerSpawnList = new();
+    private readonly List<Vector2> _companionSpawnList = new();
 
-    public static readonly List<Vector2> MonsterMovePosList = new();
+    private readonly List<bool> _playerHasCharacter = new();
+    private readonly List<bool> _companionHasCharacter = new();
+
+    public static readonly List<Vector2> PlayerMonsterMovePosList = new();
+    public static readonly List<Vector2> CompanionMonsterMovePosList = new();
 
     private void Start()
     {
@@ -41,60 +45,62 @@ public class Spawner : MonoBehaviour
     /// </summary>
     private void Initialize()
     {
-        InitGrid();
-        SpawnGrid();
+        SetGrid();
+        StartCoroutine(SpawnMonsterCo());
+    }
 
-        for (int i = 0; i < transform.childCount; i++)
+    private void SetGrid()
+    {
+        InitGrid(transform.GetChild(0), true);
+        InitGrid(transform.GetChild(1), false);
+        
+        for (int i = 0; i < transform.GetChild(0).childCount; i++)
         {
-            MonsterMovePosList.Add(transform.GetChild(i).position);
+            PlayerMonsterMovePosList.Add(transform.GetChild(0).GetChild(i).position);
         }
 
-        StartCoroutine(SpawnMonsterCo());
+        for (int i = 0; i < transform.GetChild(1).childCount; i++)
+        {
+            CompanionMonsterMovePosList.Add(transform.GetChild(1).GetChild(i).position);
+        }
     }
 
     #region Grid
 
-    private void InitGrid()
-    {
-        _parentRenderer = GetComponent<SpriteRenderer>();
-        _parentSize = _parentRenderer.bounds.size;
+    
+    private void InitGrid(Transform tt, bool player)
+    { 
+         SpriteRenderer parentRenderer = tt.GetComponent<SpriteRenderer>();
+        _parentSize = parentRenderer.bounds.size;
 
         _cellScale = new Vector2(
-            transform.localScale.x / GameDefine.GridColumnCount,
-            transform.localScale.y / GameDefine.GridRowCount
+            tt.localScale.x / GameDefine.GridColumnCount,
+            tt.localScale.y / GameDefine.GridRowCount
         );
-    }
-
-    /// <summary>
-    /// 전체 셀 위치를 계산하여 리스트에 저장합니다.
-    /// 全てのセルの位置を計算してリストに保存します。
-    /// Calculates all cell positions and stores them in the list.
-    /// </summary>
-    private void SpawnGrid()
-    {
+        
         for (int row = 0; row < GameDefine.GridRowCount; row++)
         {
             for (int col = 0; col < GameDefine.GridColumnCount; col++)
             {
-                _spawnList.Add(CalculateLocalPosition(row, col));
-                _hasCharacter.Add(false);
+                float xPos = (-_parentSize.x / 2f) + (col * _cellScale.x) + (_cellScale.x / 2f);
+                float yPos = (_parentSize.y / 2f) - (row * _cellScale.y) + (_cellScale.y / 2f);
+                float yAdjust = tt.position.y - _cellScale.y;
+                
+                switch (player)
+                {
+                    case true:
+                        _playerSpawnList.Add(new Vector2(xPos, yPos + yAdjust));
+                        _playerHasCharacter.Add(false);
+                        break;
+                    case false:
+                        _companionSpawnList.Add(new Vector2(xPos, yPos + yAdjust));
+                        _companionHasCharacter.Add(false);
+                        break;
+                }
             }
         }
     }
 
-    /// <summary>
-    /// 셀의 위치를 계산합니다 (원본 코드 위치 계산 유지).
-    /// セルの位置を計算します（元のコードと同じ位置になるように）。
-    /// Calculates the position of a cell (keeps the same logic as original code).
-    /// </summary>
-    private Vector2 CalculateLocalPosition(int row, int col)
-    {
-        float xPos = (-_parentSize.x / 2f) + (col * _cellScale.x) + (_cellScale.x / 2f);
-        float yPos = (_parentSize.y / 2f) - (row * _cellScale.y) + (_cellScale.y / 2f);
-        float yAdjust = transform.position.y - _cellScale.y;
-
-        return new Vector2(xPos, yPos + yAdjust);
-    }
 
     #endregion
 
@@ -113,7 +119,7 @@ public class Spawner : MonoBehaviour
         GameManager.Instance.Money -= GameManager.Instance.SummonCount;
         GameManager.Instance.SummonCount += 2;
         
-        int posIndex = _hasCharacter.FindIndex(occupied => occupied == false);
+        int posIndex = _playerHasCharacter.FindIndex(occupied => occupied == false);
 
         if (posIndex == -1)
         {
@@ -122,8 +128,8 @@ public class Spawner : MonoBehaviour
         }
 
         GameObject go = Instantiate(spawnPrefab);
-        go.transform.position = _spawnList[posIndex];
-        _hasCharacter[posIndex] = true;
+        go.transform.position = _playerSpawnList[posIndex];
+        _playerHasCharacter[posIndex] = true;
     }
     
     #endregion
@@ -132,12 +138,50 @@ public class Spawner : MonoBehaviour
 
     private IEnumerator SpawnMonsterCo()
     {
-        var go = Instantiate(spawnMonsterPrefab, MonsterMovePosList[0], Quaternion.identity);
-        GameManager.Instance.AddMonster(go);
-        
         yield return new WaitForSeconds(1f);
-
+        
+        if (IsClient)
+        {
+            ServerMonsterSpawnServerRpc(NetworkManager.Singleton.LocalClientId);
+        }
+        else if (IsServer)
+        {
+            MonsterSpawn(NetworkManager.Singleton.LocalClientId);
+        }
+        
         StartCoroutine(SpawnMonsterCo());
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ServerMonsterSpawnServerRpc(ulong clientId)
+    {
+        MonsterSpawn(clientId);
+    }
+
+    private void MonsterSpawn(ulong clientId)
+    {
+        var go = Instantiate(spawnMonsterPrefab, PlayerMonsterMovePosList[0], Quaternion.identity);
+        NetworkObject networkObject = go.GetComponent<NetworkObject>();
+        networkObject.Spawn();
+        //GameManager.Instance.AddMonster(go);
+        ClientMonsterSpawnClientRpc(networkObject.NetworkObjectId, clientId);
+
+    }
+
+    [ClientRpc]
+    private void ClientMonsterSpawnClientRpc(ulong networkObjId, ulong clientId)
+    {
+        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjId, out NetworkObject monsterNetworkObject))
+        {
+            if (clientId == NetworkManager.Singleton.LocalClientId)
+            {
+                monsterNetworkObject.transform.position = new Vector3(0, -3, 0);
+            }
+            else
+            {
+                monsterNetworkObject.transform.position = new Vector3(0, 3, 0);
+            }
+        }
     }
 
     #endregion

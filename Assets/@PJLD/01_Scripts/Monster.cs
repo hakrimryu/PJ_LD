@@ -27,8 +27,8 @@ public class Monster : Character
         
         if (_isDead) return;
 
-        transform.position = Vector2.MoveTowards(transform.position, Spawner.MonsterMovePosList[_targetValue], Time.deltaTime * _speed);
-        if (Vector2.Distance(transform.position, Spawner.MonsterMovePosList[_targetValue]) <= 0.0f)
+        transform.position = Vector2.MoveTowards(transform.position, Spawner.PlayerMonsterMovePosList[_targetValue], Time.deltaTime * _speed);
+        if (Vector2.Distance(transform.position, Spawner.PlayerMonsterMovePosList[_targetValue]) <= 0.0f)
         {
             _targetValue++;
             SpriteRenderer.flipX = _targetValue >= 3;
