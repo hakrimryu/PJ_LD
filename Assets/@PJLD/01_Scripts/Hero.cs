@@ -38,7 +38,7 @@ public class Hero : Character
     private void AttackEnemy(Monster enemy)
     {
         AnimatorChange("ATTACK", true);
-        enemy.GetDamage(10);
+        enemy.GetDamage(20);
     }
 
     private void OnDrawGizmosSelected()

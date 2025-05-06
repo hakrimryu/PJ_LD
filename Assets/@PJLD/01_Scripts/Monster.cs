@@ -53,6 +53,8 @@ public class Monster : Character
         {
             hp = 0;
             _isDead = true;
+            GameManager.Instance.AddMoney(1);
+            GameManager.Instance.RemoveMonster(this);
             gameObject.layer = LayerMask.NameToLayer("Default");
             StartCoroutine(DieCo());
             AnimatorChange("Die", true);

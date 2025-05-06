@@ -107,6 +107,12 @@ public class Spawner : MonoBehaviour
     /// </summary>
     public void Summon()
     {
+        if (GameManager.Instance.Money < GameManager.Instance.SummonCount)
+            return;
+        
+        GameManager.Instance.Money -= GameManager.Instance.SummonCount;
+        GameManager.Instance.SummonCount += 2;
+        
         int posIndex = _hasCharacter.FindIndex(occupied => occupied == false);
 
         if (posIndex == -1)
@@ -127,6 +133,7 @@ public class Spawner : MonoBehaviour
     private IEnumerator SpawnMonsterCo()
     {
         var go = Instantiate(spawnMonsterPrefab, MonsterMovePosList[0], Quaternion.identity);
+        GameManager.Instance.AddMonster(go);
         
         yield return new WaitForSeconds(1f);
 
