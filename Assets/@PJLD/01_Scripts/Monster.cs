@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,6 +14,8 @@ public class Monster : Character
     public int maxHp;
     private bool _isDead = false;
     
+    private List<Vector2> _moveList = new();
+    
     private float _speed = 1f;
     
     public override void Init()
@@ -21,14 +24,19 @@ public class Monster : Character
         hp = maxHp;
     }
 
+    public void SetMoveList(List<Vector2> moveList)
+    {
+        _moveList = moveList;
+    }
+
     private void Update()
     {
         hpSliderDeco.fillAmount = Mathf.Lerp(hpSliderDeco.fillAmount, hpSlider.fillAmount, Time.deltaTime * 1.5f);
         
         if (_isDead) return;
 
-        transform.position = Vector2.MoveTowards(transform.position, Spawner.PlayerMonsterMovePosList[_targetValue], Time.deltaTime * _speed);
-        if (Vector2.Distance(transform.position, Spawner.PlayerMonsterMovePosList[_targetValue]) <= 0.0f)
+        transform.position = Vector2.MoveTowards(transform.position, _moveList[_targetValue], Time.deltaTime * _speed);
+        if (Vector2.Distance(transform.position, _moveList[_targetValue]) <= 0.0f)
         {
             _targetValue++;
             SpriteRenderer.flipX = _targetValue >= 3;

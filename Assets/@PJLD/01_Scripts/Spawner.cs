@@ -30,8 +30,8 @@ public class Spawner : NetworkBehaviour
     private readonly List<bool> _playerHasCharacter = new();
     private readonly List<bool> _companionHasCharacter = new();
 
-    public static readonly List<Vector2> PlayerMonsterMovePosList = new();
-    public static readonly List<Vector2> CompanionMonsterMovePosList = new();
+    public readonly List<Vector2> PlayerMonsterMovePosList = new();
+    public readonly List<Vector2> CompanionMonsterMovePosList = new();
 
     private void Start()
     {
@@ -164,7 +164,10 @@ public class Spawner : NetworkBehaviour
         NetworkObject networkObject = go.GetComponent<NetworkObject>();
         networkObject.Spawn();
         //GameManager.Instance.AddMonster(go);
+        
         ClientMonsterSpawnClientRpc(networkObject.NetworkObjectId, clientId);
+        
+        
 
     }
 
@@ -175,11 +178,13 @@ public class Spawner : NetworkBehaviour
         {
             if (clientId == NetworkManager.Singleton.LocalClientId)
             {
-                monsterNetworkObject.transform.position = new Vector3(0, -3, 0);
+                monsterNetworkObject.transform.position = PlayerMonsterMovePosList[0];
+                monsterNetworkObject.GetComponent<Monster>().SetMoveList(PlayerMonsterMovePosList);
             }
             else
             {
-                monsterNetworkObject.transform.position = new Vector3(0, 3, 0);
+                monsterNetworkObject.transform.position = CompanionMonsterMovePosList[0];
+                monsterNetworkObject.GetComponent<Monster>().SetMoveList(CompanionMonsterMovePosList);
             }
         }
     }
